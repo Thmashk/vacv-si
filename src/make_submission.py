@@ -67,8 +67,15 @@ def build_model(kind: str, tail_scale: float):
 
 
 def apply_known_answers(test: pd.DataFrame, pred: np.ndarray,
-                        train: pd.DataFrame) -> tuple[np.ndarray, int]:
-    """Для молекул, присутствующих в трейне, берём известный SI."""
+                        train: pd.DataFrame,
+                        exact_only: bool = False) -> tuple[np.ndarray, int]:
+    """Для молекул, присутствующих в трейне, берём известный SI.
+
+    exact_only — подставлять только при совпадении и молекулы, и культуры.
+    SI сильно зависит от клеточной линии, поэтому среднее по молекуле без
+    учёта культуры вносит шум. Со смесью по соседям этот случай лучше
+    отдать ей: там культура учтена отдельным множителем.
+    """
     pred = pred.copy()
     exact = (train.groupby(["smiles_std", "Culture"])[TARGET].mean().to_dict())
     loose = train.groupby("smiles_std")[TARGET].mean().to_dict()
@@ -78,10 +85,25 @@ def apply_known_answers(test: pd.DataFrame, pred: np.ndarray,
         if key in exact:
             pred[i] = exact[key]
             hits += 1
-        elif row.smiles_std in loose:
+        elif not exact_only and row.smiles_std in loose:
             pred[i] = loose[row.smiles_std]
             hits += 1
     return pred, hits
+
+
+def load_neighbor_external(which: str) -> pd.DataFrame:
+    """Внешний набор для смеси по соседям: нужны smiles_std и SI."""
+    from .config import ROOT
+    from .data import standardize_smiles
+
+    path = ROOT / "data" / "processed" / (
+        "vacv_external_usable.csv" if which == "usable" else "vacv_external_dataset.csv")
+    if not path.exists():
+        raise SystemExit(f"нет {path}")
+    ext = pd.read_csv(path)
+    ext["smiles_std"] = ext["smiles"].map(standardize_smiles)
+    ext = ext.dropna(subset=["smiles_std", "SI"])
+    return ext[ext["SI"] > 0].reset_index(drop=True)
 
 
 def unify_duplicates(test: pd.DataFrame, pred: np.ndarray) -> np.ndarray:
@@ -118,6 +140,14 @@ def main() -> None:
     ap.add_argument("--name", default=None)
     ap.add_argument("--no-known", action="store_true",
                     help="не подставлять ответы для известных молекул")
+    ap.add_argument("--neighbors", action="store_true",
+                    help="смешать прогноз модели со значениями похожих молекул")
+    ap.add_argument("--exact-thr", type=float, default=0.99,
+                    help="сходство, начиная с которого прогноз берётся у копии "
+                         "целиком, без вклада модели; 0 отключает")
+    ap.add_argument("--neighbor-source", default="usable",
+                    choices=["usable", "dataset"],
+                    help="какой внешний набор брать для соседей")
     ap.add_argument("--comment", default="")
     args = ap.parse_args()
 
@@ -136,11 +166,27 @@ def main() -> None:
     print(f"сырой прогноз: мин {pred.min():,.2f}, медиана {np.median(pred):,.2f}, "
           f"среднее {pred.mean():,.2f}, макс {pred.max():,.2f}")
 
+    if args.neighbors:
+        from .neighbors import NeighborBlend
+
+        ext = load_neighbor_external(args.neighbor_source)
+        nb = NeighborBlend(exact_thr=args.exact_thr if args.exact_thr > 0 else None)
+        nb.fit(train, y, ext)
+        before = pred.copy()
+        pred = np.asarray(nb.predict(test, pred), dtype=float)
+        changed = int((np.abs(pred - before) > 1e-6).sum())
+        print(f"соседи: внешних строк {len(ext)}, изменено прогнозов {changed}, "
+              f"порог точной копии {args.exact_thr}")
+        print(f"после смеси: медиана {np.median(pred):,.2f}, "
+              f"среднее {pred.mean():,.2f}, макс {pred.max():,.2f}")
+
     pred = unify_duplicates(test, pred)
     hits = 0
     if not args.no_known:
-        pred, hits = apply_known_answers(test, pred, train)
-        print(f"подставлено известных ответов: {hits}")
+        pred, hits = apply_known_answers(test, pred, train,
+                                         exact_only=args.neighbors)
+        print(f"подставлено известных ответов: {hits}"
+              + (" (только совпадение молекулы и культуры)" if args.neighbors else ""))
 
     pred = np.clip(pred, 0.0, None)
     target_col = sample.columns[1]
@@ -161,8 +207,9 @@ def main() -> None:
         if new:
             w.writerow(["время", "файл", "коммит", "модель", "tail_scale",
                         "известные", "среднее", "макс", "LB", "комментарий"])
+        model_name = args.model + ("+соседи" if args.neighbors else "")
         w.writerow([f"{dt.datetime.now():%Y-%m-%d %H:%M}", path.name, git_commit(),
-                    args.model, args.tail_scale, hits, round(float(pred.mean()), 2),
+                    model_name, args.tail_scale, hits, round(float(pred.mean()), 2),
                     round(float(pred.max()), 2), "", args.comment])
     print(f"журнал обновлён: {log}")
 
