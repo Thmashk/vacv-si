@@ -1,0 +1,9 @@
+row,title,hypothesis,p_gt_10k,mean_cap20k,mean_cap40k,log10_mean
+160,8b,M_full unconditional,0.787,16010.350,28345.812,4.664
+160,8b,M_full | letters=top-4 (H_sel),0.547,11727.301,18676.419,4.052
+56,8c,M_full unconditional,0.605,12774.321,20058.283,4.164
+56,8c,M_full | letters=top-4 (H_sel),0.393,8848.887,12771.665,3.709
+233,7e,M_full unconditional,0.015,847.135,938.685,2.328
+233,7e,M_full | letters=top-4 (H_sel),0.039,1886.780,2144.884,2.849
+326,7l,M_full unconditional,0.002,113.663,126.788,1.215
+326,7l,M_full | letters=top-4 (H_sel),0.008,553.082,595.488,2.401

@@ -1,0 +1,25 @@
+te_pos,te_title,tr_title,tr_SI,te_cfg,tr_cfg,type,te_unspec,tr_unspec,te_in_fam,exact_dup_also
+5,9k,10k,0.0,fench_SRS,fench_SRR,diastereomer/other,0,0,True,False
+56,8c-as-536,7c-as-521,223.0,born_RRS,born_RRR,diastereomer/other,0,0,True,False
+57,sid160708211,sid160681401,1.33,,,diastereomer/other,0,0,False,False
+71,2'd,2d,1.55,,,enantiomer,0,0,False,False
+74,3'b,13,0.0,,,enantiomer,0,0,False,False
+88,3n,3m (ster?),0.0,,,diastereomer/other,0,0,False,False
+122,2 (mixture 1:1),2 (mixture 1:1),65.22,,,diastereomer/other,0,0,False,False
+157,sid312353988,sid312353993,0.93,,,diastereomer/other,0,0,False,False
+160,8b-as-556,7b-ya-669-nav-1,2324.91,born_RRS,born_RRR,diastereomer/other,0,0,True,False
+217,sid469801948,sid469823030,0.0,,,diastereomer/other,0,0,False,False
+233,7e-as-515,8e-as-555-15-16,36066.67,born_RRR,born_RRS,diastereomer/other,0,0,True,False
+247,3d,3'd,0.0,,,enantiomer,0,0,False,False
+277,sid103302350,Vidarabine,132.0,,,unspec-differs,0,4,False,False
+319,sid312353844,sid312353845,1.0,,,diastereomer/other,0,0,False,False
+326,7l-as-529,8l,991.93,born_RRR,born_RRS,diastereomer/other,0,0,True,False
+379,9c-qs-728,10c-qs-724,17.06,fench_SRR,fench_SRS,diastereomer/other,0,0,True,False
+397,AraC,Cytarabine,123.53,,,unspec-differs,0,4,False,False
+426,sid103610987,sid103610921,43.48,,,diastereomer/other,0,0,False,False
+428,sid103605306,14,1.33,,,diastereomer/other,0,0,False,False
+470,9f-qs-776,10f-qs-727,4.14,fench_SRR,fench_SRS,diastereomer/other,0,0,True,False
+484,9e-qs-772,10e-qs-746,18.08,fench_SRR,fench_SRS,diastereomer/other,0,0,True,False
+491,3c,3'c,3.44,,,enantiomer,0,0,False,False
+530,sid312353836,sid312353838,1.0,,,diastereomer/other,0,0,False,False
+546,10l,9l,0.0,fench_SRR,fench_SRS,diastereomer/other,0,0,True,False
