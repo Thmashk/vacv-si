@@ -10,6 +10,14 @@ SI = CC50 / IC50      (обе величины в мкМ)
 Метрика соревнования — **MSE на исходном SI**, логарифм к ответу не
 применяется. Файл ответа: CSV с колонками `index,SI VACV`.
 
+## Для проверяющего
+
+**Финальные сабмиты на Kaggle:** `submissions/fam2_gen.csv` и `submissions/aggressive.csv`.
+
+**Как воспроизвести:** `make env`, затем положить файлы соревнования в `data/raw/`, затем `make family`. Полученный `submissions/fam2_gen.csv` совпадает с отправленным точно.
+
+**Как убедиться, что запрещённые колонки не использованы:** `make test`. Подробности в конце этого файла и в [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md).
+
 ## Результат
 
 | | Public Score |
