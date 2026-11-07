@@ -13,7 +13,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from rdkit import Chem
-from rdkit.Chem import Descriptors, rdFingerprintGenerator
+from rdkit.Chem import MACCSkeys, DataStructs, Descriptors, rdFingerprintGenerator
 
 from .config import MORGAN_BITS, MORGAN_RADIUS
 
@@ -45,6 +45,72 @@ _STRAIN_KEYS = {
     "strain_ihd": "ihd",
     "strain_variola": "variola",
 }
+
+
+# Известные противооспенные и нуклеозидные противовирусные препараты. Близость к ним
+# (максимальное сходство Tanimoto по Morgan) и флаг «нуклеозидоподобная» нужны, чтобы
+# модель узнавала редкие высокоселективные вещества, которые определяют MSE.
+_REFERENCE_ANTIVIRALS = {
+    "cidofovir": "Nc1ccn(C[C@@H](CO)OCP(=O)(O)O)c(=O)n1",
+    "brincidofovir": "CCCCCCCCCCCCCCCCOCCCOP(=O)(O)CO[C@H](CO)Cn1ccc(N)nc1=O",
+    "tecovirimat": "O=C1C2C3C=CC(C4CC34)C2C(=O)N1NC(=O)c1ccc(cc1)C(F)(F)F",
+    "trifluridine": "O=c1[nH]c(=O)n(cc1C(F)(F)F)[C@H]1C[C@H](O)[C@@H](CO)O1",
+    "idoxuridine": "O=c1[nH]c(=O)n(cc1I)[C@H]1C[C@H](O)[C@@H](CO)O1",
+    "brivudine": "O=c1[nH]c(=O)n(cc1C=CBr)[C@H]1C[C@H](O)[C@@H](CO)O1",
+    "ribavirin": "NC(=O)c1ncn([C@@H]2O[C@H](CO)[C@@H](O)[C@H]2O)n1",
+    "acyclovir": "Nc1nc2n(COCCO)cnc2c(=O)[nH]1",
+    "cytarabine": "Nc1ccn([C@@H]2O[C@H](CO)[C@@H](O)[C@@H]2O)c(=O)n1",
+}
+_NUCLEOSIDE_SMARTS = [
+    Chem.MolFromSmarts(x) for x in (
+        "[#7;R]-[CX4;R]1-[O;R]-[CX4;R]-[CX4;R]-[CX4;R]1",   # N-гликозид (фураноза)
+        "[#7;R]-[CX4]-[CX4]-[OX2]",                           # ациклический аналог
+        "P(=O)([OX2H1,OX1-])[OX2H1,OX1-]",                    # фосфонат/фосфат
+    )
+]
+_REF_FPS = None
+
+
+def _ref_fps():
+    global _REF_FPS
+    if _REF_FPS is None:
+        _REF_FPS = [_GEN_BIT.GetFingerprint(m) for m in
+                    (Chem.MolFromSmiles(v) for v in _REFERENCE_ANTIVIRALS.values())
+                    if m is not None]
+    return _REF_FPS
+
+
+_GEN_BIT = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=2048)
+
+
+def maccs_matrix(smiles: list[str]) -> tuple[np.ndarray, list[str]]:
+    out = np.zeros((len(smiles), 167), dtype=np.float32)
+    for i, s in enumerate(smiles):
+        m = Chem.MolFromSmiles(s)
+        if m is not None:
+            arr = np.zeros((167,))
+            DataStructs.ConvertToNumpyArray(MACCSkeys.GenMACCSKeys(m), arr)
+            out[i] = arr
+    return out, [f"maccs_{i}" for i in range(167)]
+
+
+def antiviral_matrix(smiles: list[str]) -> tuple[np.ndarray, list[str]]:
+    refs = _ref_fps()
+    out = np.zeros((len(smiles), 2 + len(_NUCLEOSIDE_SMARTS)), dtype=np.float32)
+    for i, s in enumerate(smiles):
+        m = Chem.MolFromSmiles(s)
+        if m is None:
+            continue
+        sims = DataStructs.BulkTanimotoSimilarity(_GEN_BIT.GetFingerprint(m), refs)
+        out[i, 0] = max(sims)
+        out[i, 1] = float(np.mean(sims))
+        for j, patt in enumerate(_NUCLEOSIDE_SMARTS):
+            out[i, 2 + j] = float(m.HasSubstructMatch(patt))
+    names = ["ref_sim_max", "ref_sim_mean"] + [f"nucl_flag_{j}" for j in range(len(_NUCLEOSIDE_SMARTS))]
+    return out, names
+
+
+_EXTRAS = {"maccs": maccs_matrix, "antiviral": antiviral_matrix}
 
 
 def _mol(smiles: str):
@@ -90,8 +156,9 @@ class FeatureBuilder:
     колонка, которой модель не видела при обучении.
     """
 
-    def __init__(self, min_culture_count: int = 3):
+    def __init__(self, min_culture_count: int = 3, extras: tuple[str, ...] = ()):
         self.min_culture_count = min_culture_count
+        self.extras = tuple(extras)
         self.cultures_: list[str] = []
         self.names_: list[str] = []
 
@@ -122,8 +189,13 @@ class FeatureBuilder:
         )
         strain_names = list(_STRAIN_KEYS)
 
-        X = np.hstack([fp, desc, cult_mat, strain_mat]).astype(np.float32)
-        self.names_ = fp_names + desc_names + cult_names + strain_names
+        blocks, block_names = [fp, desc, cult_mat, strain_mat], fp_names + desc_names + cult_names + strain_names
+        for key in self.extras:
+            mat, nm = _EXTRAS[key](smiles)
+            blocks.append(mat)
+            block_names = block_names + nm
+        X = np.hstack(blocks).astype(np.float32)
+        self.names_ = block_names
         return X, self.names_
 
     def fit_transform(self, df: pd.DataFrame) -> tuple[np.ndarray, list[str]]:
