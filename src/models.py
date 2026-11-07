@@ -172,6 +172,43 @@ class TailAwareForest:
         return np.clip(self.model_.predict(X), 0.0, None)
 
 
+class KernelLogModel:
+    """Ядерная гребневая регрессия на log10(1+SI) с MinMax-ядром (Tanimoto по счётчикам).
+
+    Ядро = K_minmax(Morgan) + w * K_линейное(культура/штамм). Сумма ядер остаётся ядром, так что
+    культура сдвигает прогноз, а похожесть молекул задаёт форму. Поправка Дуана при обратном переходе.
+    """
+
+    name = "ядро MinMax + культура"
+
+    def __init__(self, fp_idx, ctx_idx, alpha: float = 0.5, w_ctx: float = 0.5, seed: int = SEED):
+        self.fp_idx, self.ctx_idx = np.asarray(fp_idx), np.asarray(ctx_idx)
+        self.alpha, self.w_ctx, self.seed = alpha, w_ctx, seed
+
+    def _k(self, A, B):
+        from scipy.spatial.distance import cdist
+
+        fa, fb = A[:, self.fp_idx].astype(np.float64), B[:, self.fp_idx].astype(np.float64)
+        l1 = cdist(fa, fb, "cityblock")
+        s = fa.sum(1)[:, None] + fb.sum(1)[None, :]
+        k = (s - l1) / np.maximum(s + l1, 1e-9)
+        ca, cb = A[:, self.ctx_idx].astype(np.float64), B[:, self.ctx_idx].astype(np.float64)
+        return k + self.w_ctx * (ca @ cb.T) / max(ca.shape[1], 1)
+
+    def fit(self, X, y):
+        t = np.log10(np.asarray(y, dtype=float) + 1.0)
+        self.X_, self.mu_ = X, float(t.mean())
+        K = self._k(X, X)
+        self.a_ = np.linalg.solve(K + self.alpha * np.eye(len(K)), t - self.mu_)
+        resid = t - (self.mu_ + K @ self.a_)
+        self.smear_ = float(np.mean(10.0 ** resid))
+        return self
+
+    def predict(self, X):
+        mu = self.mu_ + self._k(X, self.X_) @ self.a_
+        return np.clip(10.0 ** mu * self.smear_ - 1.0, 0.0, None)
+
+
 class Blend:
     """Взвешенная смесь моделей. Веса подбираются по OOF-предсказаниям."""
 
