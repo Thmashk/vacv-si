@@ -1,7 +1,7 @@
 """Сабмит итоговой модели R4 (v2, см. src/final_model.py). Не меняет make_submission.
 
 Запуск:  python -m src.make_v2_submission --name r4_v2 --twin-cap 18000
-         python -m src.make_v2_submission --name r4_v2_diag --twin-cap 3000   # диагностический: чистый публичный замер
+         python -m src.make_v2_submission --name r4_v2_diag --twin-cap 5000   # диагностический: чистый публичный замер
 
 twin-cap — потолок прогноза для строк с копией известной молекулы. В тесте есть строка-копия гиганта трейна (SI=36067, Vero).
 Из публичных фактов (MSE константы 1.9M на 179 строках) следует, что в публичной части нет значений выше ~18000, поэтому эта
