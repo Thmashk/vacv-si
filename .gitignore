@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/raw/*.csv
+data/external/
+reports/*.npz
+.DS_Store
+*.pdf
