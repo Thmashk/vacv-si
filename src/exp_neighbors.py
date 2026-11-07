@@ -9,7 +9,7 @@ import pandas as pd
 
 from .config import REPORTS, SEED, TARGET
 from .cv import iter_splits, rmse_log, scaffold_groups, spearman
-from .data import load_train, standardize_smiles
+from .data import load_test, load_train, standardize_smiles
 from .features import FeatureBuilder
 from .models import LogSmearingModel
 from .neighbors import NeighborBlend, fp_matrix, tanimoto
@@ -19,14 +19,21 @@ def main() -> None:
     tr = load_train()
     y = tr[TARGET].to_numpy(float)
     groups = scaffold_groups(tr["smiles_std"])
-    ex = pd.read_csv("data/processed/vacv_external_dataset.csv")
+    import os
+    path = "data/processed/vacv_external_usable.csv" if os.path.exists("data/processed/vacv_external_usable.csv") else "data/processed/vacv_external_dataset.csv"
+    print("внешний набор:", path)
+    ex = pd.read_csv(path)
     ex["smiles_std"] = ex["smiles"].map(standardize_smiles)
     ex = ex.dropna(subset=["smiles_std"]).reset_index(drop=True)
     X, _ = FeatureBuilder().fit_transform(tr)
     tfp, efp = fp_matrix(tr["smiles_std"]), fp_matrix(ex["smiles_std"])
     ex_vs_tr = tanimoto(efp, tfp)
-    grid = [dict(p=p, lam=lam, w_ext=we, culture_factor=cf)
-            for p, lam, we, cf in itertools.product((12, 20), (0.3, 1.0, 3.0), (0.5,), (0.3,))]
+    te = load_test()
+    tf = fp_matrix(te["smiles_std"])
+    nn = np.maximum(tanimoto(tf, tfp).max(1), tanimoto(tf, efp).max(1))
+    print(f"покрытие теста (train + внешний): копия >=0.99: {(nn >= 0.99).sum()} из {len(te)}, >=0.7: {(nn >= 0.7).sum()}, >=0.5: {(nn >= 0.5).sum()}")
+    grid = [dict(p=20, lam=lam, w_ext=we, culture_factor=0.3, exact_thr=et)
+            for lam, we, et in itertools.product((0.3, 1.0), (0.5, 1.0), (None, 0.99))]
     big = int(np.argmax(y))
     store = {("база", "-"): np.zeros((2, len(y)))}
     for key in itertools.product(("A", "B"), range(len(grid))):

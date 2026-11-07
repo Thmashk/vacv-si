@@ -4,20 +4,21 @@
 
 | протокол | параметры | RMSE log | Spearman | MSE | MSE без гиганта |
 |---|---|---|---|---|---|
-| A | {'p': 20, 'lam': 0.3, 'w_ext': 0.5, 'culture_factor': 0.3} | 0.737 | 0.575 | 4,153,756 | 107,200 |
-| A | {'p': 20, 'lam': 1.0, 'w_ext': 0.5, 'culture_factor': 0.3} | 0.748 | 0.560 | 4,184,831 | 136,769 |
-| B | {'p': 20, 'lam': 0.3, 'w_ext': 0.5, 'culture_factor': 0.3} | 0.755 | 0.550 | 4,260,711 | 214,491 |
-| A | {'p': 12, 'lam': 1.0, 'w_ext': 0.5, 'culture_factor': 0.3} | 0.756 | 0.565 | 4,170,299 | 130,805 |
-| A | {'p': 12, 'lam': 3.0, 'w_ext': 0.5, 'culture_factor': 0.3} | 0.758 | 0.553 | 4,219,058 | 173,641 |
-| B | {'p': 12, 'lam': 1.0, 'w_ext': 0.5, 'culture_factor': 0.3} | 0.758 | 0.554 | 4,243,239 | 203,974 |
-| A | {'p': 20, 'lam': 3.0, 'w_ext': 0.5, 'culture_factor': 0.3} | 0.760 | 0.543 | 4,226,483 | 178,087 |
-| B | {'p': 12, 'lam': 3.0, 'w_ext': 0.5, 'culture_factor': 0.3} | 0.760 | 0.546 | 4,259,301 | 214,010 |
-| B | {'p': 20, 'lam': 1.0, 'w_ext': 0.5, 'culture_factor': 0.3} | 0.763 | 0.539 | 4,266,663 | 218,857 |
-| A | {'p': 12, 'lam': 0.3, 'w_ext': 0.5, 'culture_factor': 0.3} | 0.767 | 0.571 | 4,138,212 | 116,495 |
-| B | {'p': 12, 'lam': 0.3, 'w_ext': 0.5, 'culture_factor': 0.3} | 0.768 | 0.562 | 4,218,666 | 197,201 |
-| B | {'p': 20, 'lam': 3.0, 'w_ext': 0.5, 'culture_factor': 0.3} | 0.769 | 0.529 | 4,268,450 | 220,186 |
-| база | - | 0.777 | 0.515 | 4,269,358 | 220,865 |
+| A | {'p': 20, 'lam': 0.3, 'w_ext': 1.0, 'culture_factor': 0.3, 'exact_thr': 0.99} | 0.667 | 0.608 | 4,113,458 | 66,776 |
+| A | {'p': 20, 'lam': 0.3, 'w_ext': 0.5, 'culture_factor': 0.3, 'exact_thr': 0.99} | 0.668 | 0.606 | 4,113,574 | 66,892 |
+| A | {'p': 20, 'lam': 1.0, 'w_ext': 1.0, 'culture_factor': 0.3, 'exact_thr': 0.99} | 0.670 | 0.603 | 4,116,752 | 68,476 |
+| A | {'p': 20, 'lam': 0.3, 'w_ext': 1.0, 'culture_factor': 0.3, 'exact_thr': None} | 0.672 | 0.613 | 4,113,349 | 66,666 |
+| A | {'p': 20, 'lam': 1.0, 'w_ext': 0.5, 'culture_factor': 0.3, 'exact_thr': 0.99} | 0.672 | 0.602 | 4,116,794 | 68,518 |
+| A | {'p': 20, 'lam': 0.3, 'w_ext': 0.5, 'culture_factor': 0.3, 'exact_thr': None} | 0.679 | 0.612 | 4,123,803 | 77,153 |
+| A | {'p': 20, 'lam': 1.0, 'w_ext': 1.0, 'culture_factor': 0.3, 'exact_thr': None} | 0.686 | 0.606 | 4,142,485 | 94,290 |
+| A | {'p': 20, 'lam': 1.0, 'w_ext': 0.5, 'culture_factor': 0.3, 'exact_thr': None} | 0.696 | 0.597 | 4,172,934 | 124,834 |
+| B | {'p': 20, 'lam': 0.3, 'w_ext': 1.0, 'culture_factor': 0.3, 'exact_thr': None} | 0.748 | 0.554 | 4,254,236 | 207,995 |
+| B | {'p': 20, 'lam': 0.3, 'w_ext': 1.0, 'culture_factor': 0.3, 'exact_thr': 0.99} | 0.748 | 0.554 | 4,254,236 | 207,995 |
+| B | {'p': 20, 'lam': 0.3, 'w_ext': 0.5, 'culture_factor': 0.3, 'exact_thr': None} | 0.751 | 0.552 | 4,259,193 | 212,968 |
+| B | {'p': 20, 'lam': 0.3, 'w_ext': 0.5, 'culture_factor': 0.3, 'exact_thr': 0.99} | 0.751 | 0.552 | 4,259,193 | 212,968 |
+| B | {'p': 20, 'lam': 1.0, 'w_ext': 1.0, 'culture_factor': 0.3, 'exact_thr': None} | 0.754 | 0.548 | 4,264,467 | 216,654 |
+| B | {'p': 20, 'lam': 1.0, 'w_ext': 1.0, 'culture_factor': 0.3, 'exact_thr': 0.99} | 0.754 | 0.548 | 4,264,467 | 216,654 |
 
 База: RMSE log 0.777, Spearman 0.515, MSE 4,269,358, без гиганта 220,865
-Лучший A: {'p': 20, 'lam': 0.3, 'w_ext': 0.5, 'culture_factor': 0.3} -> RMSE log 0.737, Spearman 0.575
-Лучший B: {'p': 20, 'lam': 0.3, 'w_ext': 0.5, 'culture_factor': 0.3} -> RMSE log 0.755, Spearman 0.550
+Лучший A: {'p': 20, 'lam': 0.3, 'w_ext': 1.0, 'culture_factor': 0.3, 'exact_thr': 0.99} -> RMSE log 0.667, Spearman 0.608
+Лучший B: {'p': 20, 'lam': 0.3, 'w_ext': 1.0, 'culture_factor': 0.3, 'exact_thr': None} -> RMSE log 0.748, Spearman 0.554

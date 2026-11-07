@@ -30,7 +30,8 @@ def tanimoto(A: np.ndarray, B: np.ndarray) -> np.ndarray:
 
 class NeighborBlend:
     def __init__(self, p: float = 20.0, lam: float = 0.3, w_ext: float = 0.5,
-                 culture_factor: float = 0.3, ext_cap: float = 5000.0):
+                 culture_factor: float = 0.3, ext_cap: float = 5000.0, exact_thr: float | None = None):
+        self.exact_thr = exact_thr
         self.p, self.lam, self.w_ext = p, lam, w_ext
         self.culture_factor, self.ext_cap = culture_factor, ext_cap
 
@@ -50,8 +51,12 @@ class NeighborBlend:
 
     def predict(self, query: pd.DataFrame, base: np.ndarray, query_fp=None) -> np.ndarray:
         q = fp_matrix(query["smiles_std"]) if query_fp is None else query_fp
-        w = tanimoto(q, self.fp_) ** self.p
+        sim = tanimoto(q, self.fp_)
+        w = sim ** self.p
         qc = query["Culture"].astype(str).str.strip().str.lower().to_numpy()
         same = (qc[:, None] == self.cult_[None, :]) | self.isext_[None, :]
         w = w * np.where(same, 1.0, self.culture_factor) * np.where(self.isext_, self.w_ext, 1.0)[None, :]
-        return (w @ self.val_ + self.lam * np.asarray(base, float)) / (w.sum(1) + self.lam)
+        lam = np.full(len(q), self.lam)
+        if self.exact_thr is not None:  # точная копия известна: прогноз = её значение, без базы
+            lam[sim.max(1) >= self.exact_thr] = 1e-9
+        return (w @ self.val_ + lam * np.asarray(base, float)) / (w.sum(1) + lam)
