@@ -1,7 +1,7 @@
 PY := ./.venv/bin/python
 PIP := ./.venv/bin/pip
 
-.PHONY: env hooks test cv submit submit-safe submit-aggressive all clean
+.PHONY: env hooks test collect data validate-data cv submit submit-safe submit-aggressive all clean
 
 env:
 	python3 -m venv .venv
@@ -16,6 +16,18 @@ hooks:
 
 test:
 	$(PY) -m pytest tests -q
+
+# Выгрузка из открытых баз. Ответы кэшируются, повторный запуск быстрый.
+collect:
+	$(PY) -m src.collect.chembl_vacv
+	$(PY) -m src.collect.pubchem_vacv
+
+# Сборка итогового датасета из выгрузок.
+data: collect
+	$(PY) -m src.data.build_dataset
+
+validate-data:
+	$(PY) -m src.data.validate_dataset
 
 cv:
 	$(PY) -m src.run_cv

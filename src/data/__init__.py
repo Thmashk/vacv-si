@@ -10,7 +10,7 @@ import pandas as pd
 from rdkit import Chem, RDLogger
 from rdkit.Chem import SaltRemover
 
-from .config import FORBIDDEN, SAMPLE_CSV, SMILES_COL, TARGET, TEST_CSV, TRAIN_CSV
+from ..config import FORBIDDEN, SAMPLE_CSV, SMILES_COL, TARGET, TEST_CSV, TRAIN_CSV
 
 RDLogger.DisableLog("rdApp.*")
 _SALT_REMOVER = SaltRemover.SaltRemover()
