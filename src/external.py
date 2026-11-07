@@ -27,6 +27,10 @@ from .models import KernelLogModel, LogSmearingModel
 RDLogger.DisableLog("rdApp.*")
 
 EXTERNAL_CSV = ROOT / "data" / "processed" / "vacv_external_dataset.csv"
+# Набор R2: отдельно собранный и тщательнее отфильтрованный. В нём нет строк,
+# где IC50 в точности равен CC50 (потолок концентрации, записанный дважды,
+# даёт мнимый SI = 1); в наборе выше таких строк 301.
+EXTERNAL_R2_CSV = ROOT / "data" / "processed" / "vacv_external_usable.csv"
 EXTERNAL_CULTURE = "__external__"
 
 
@@ -72,6 +76,55 @@ def load_external(reliable_only: bool = True,
     })
     out["ik_block"] = [inchikey_block(s) for s in out["smiles_std"]]
     return out[out["smiles_std"].notna()].reset_index(drop=True)
+
+
+def load_external_r2(reliable_only: bool = True,
+                     clip: float | None = None,
+                     weight: float = 1.0) -> pd.DataFrame:
+    """Набор R2 из data/processed/vacv_external_usable.csv.
+
+    Схема другая: вместо pairing_quality колонка quality, вместо organism
+    ничего подходящего нет, поэтому strain остаётся пустым и флаги штаммов
+    для внешних строк не поднимаются. Надёжной считается запись с
+    quality == "exact" и без цензуры в обеих величинах.
+    """
+    if not EXTERNAL_R2_CSV.exists():
+        raise SystemExit(f"нет {EXTERNAL_R2_CSV}")
+
+    df = pd.read_csv(EXTERNAL_R2_CSV)
+    if reliable_only:
+        ok = pd.Series(True, index=df.index)
+        if "quality" in df.columns:
+            ok &= df["quality"].astype(str).eq("exact")
+        for c in ("ic50_censored", "cc50_censored"):
+            if c in df.columns:
+                ok &= ~df[c].fillna(False).astype(bool)
+        df = df[ok]
+    df = df[df["SI"].notna() & (df["SI"] > 0)].copy()
+
+    si = df["SI"].to_numpy(dtype=float)
+    if clip is not None:
+        si = np.minimum(si, float(clip))
+
+    out = pd.DataFrame({
+        "SMILES": df["smiles"].to_numpy(),
+        "smiles_std": [standardize_smiles(s) or s for s in df["smiles"]],
+        "Culture": EXTERNAL_CULTURE,
+        "strain": "",
+        TARGET: si,
+        "weight": float(weight),
+        "is_external": True,
+    })
+    if "skeleton" in df.columns:
+        out["ik_block"] = df["skeleton"].to_numpy()
+    else:
+        out["ik_block"] = [inchikey_block(s) for s in out["smiles_std"]]
+    return out[out["smiles_std"].notna()].reset_index(drop=True)
+
+
+def load_any(which: str, **kw) -> pd.DataFrame:
+    """which: 'mine' — набор из PR #1, 'r2' — набор коллеги."""
+    return load_external_r2(**kw) if which == "r2" else load_external(**kw)
 
 
 def add_keys(df: pd.DataFrame) -> pd.DataFrame:

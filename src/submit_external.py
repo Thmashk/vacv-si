@@ -25,13 +25,12 @@ import pandas as pd
 
 from .config import ID_COL, SUBMISSIONS, TARGET
 from .data import load_sample_submission, load_test, load_train
-from .external import add_keys, build_model, load_external
+from .external import add_keys, build_model, load_any
 from .features import FeatureBuilder
 from .make_submission import apply_known_answers, unify_duplicates, validate
 
 CLIP = 5000.0
 WEIGHT = 1.0
-RELIABLE_ONLY = False
 
 
 def fit_predict(kind: str, train, ext, X_tr, X_ext, X_te, fp_idx, ctx_idx):
@@ -48,6 +47,10 @@ def main() -> None:
     ap.add_argument("--model", default="log", choices=["log", "kernel", "both"])
     ap.add_argument("--target-mean", type=float, default=323.38,
                     help="измеренное зондами среднее теста; 0 отключает выравнивание")
+    ap.add_argument("--source", default="r2", choices=["mine", "r2"],
+                    help="какой внешний набор брать")
+    ap.add_argument("--all-rows", action="store_true",
+                    help="брать и ненадёжные строки внешнего набора")
     ap.add_argument("--max-cap", type=float, default=0.0,
                     help="верхняя граница прогноза; 0 отключает")
     ap.add_argument("--name", default=None)
@@ -57,8 +60,9 @@ def main() -> None:
     train = add_keys(load_train())
     test = load_test()
     sample = load_sample_submission()
-    ext = load_external(reliable_only=RELIABLE_ONLY, clip=CLIP, weight=WEIGHT)
-    print(f"трейн {len(train)}, внешних {len(ext)} (clip {CLIP:g}), тест {len(test)}")
+    ext = load_any(args.source, reliable_only=not args.all_rows,
+                   clip=CLIP, weight=WEIGHT)
+    print(f"трейн {len(train)}, внешних {len(ext)} из набора {args.source} (clip {CLIP:g}), тест {len(test)}")
 
     fb = FeatureBuilder().fit(pd.concat([train, ext], ignore_index=True))
     X_tr, names = fb.transform(train)
@@ -116,10 +120,10 @@ def main() -> None:
 
     log = SUBMISSIONS / "log.csv"
     row = {"время": f"{dt.datetime.now():%Y-%m-%d %H:%M}", "файл": path.name,
-           "коммит": "-", "модель": f"ext_{args.model}", "tail_scale": "",
+           "коммит": "-", "модель": f"ext_{args.source}_{args.model}", "tail_scale": "",
            "известные": hits, "среднее": round(float(pred.mean()), 2),
            "макс": round(float(pred.max()), 2), "LB": "",
-           "комментарий": args.comment or f"внешние w={WEIGHT}, clip={CLIP:g}"}
+           "комментарий": args.comment or f"внешние {args.source} w={WEIGHT}, clip={CLIP:g}"}
     if log.exists():
         with log.open("a", newline="", encoding="utf-8") as f:
             csv.DictWriter(f, fieldnames=list(pd.read_csv(log).columns)).writerow(row)
