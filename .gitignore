@@ -7,3 +7,25 @@ data/external/
 reports/*.npz
 .DS_Store
 *.pdf
+
+# --- R2, внешние данные ---
+# служебные файлы докачки коллекторов
+_done_*.txt
+_ids_*.txt
+# сырые выгрузки API, пересобираются коллекторами
+chembl_vacv_raw.csv
+pubchem_vacv_raw.csv
+chembl_docs.csv
+pubchem_docs.csv
+# плоские выгрузки в корне, канонические копии лежат в data/processed/
+/vacv_external_dataset.csv
+/vacv_external_usable.csv
+/vacv_external_molecules.csv
+# данные соревнования Kaggle: выкладывать запрещено правилами
+train.csv
+train_v2.csv
+test.csv
+sample_submit.csv
+data/raw/
+# IDE
+.idea/
