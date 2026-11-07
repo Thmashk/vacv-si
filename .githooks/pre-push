@@ -1,0 +1,25 @@
+#!/bin/sh
+# Не даёт запушить напрямую в main и запускает тесты перед отправкой.
+# Включается командой: make hooks
+# Разовый обход, если очень нужно: git push --no-verify
+
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+	case "$remote_ref" in
+	refs/heads/main)
+		echo "Прямой пуш в main запрещён." >&2
+		echo "Сделайте ветку: git switch -c r4/название, затем gh pr create --fill" >&2
+		echo "Правила в CONTRIBUTING.md" >&2
+		exit 1
+		;;
+	esac
+done
+
+if [ -x ./.venv/bin/python ]; then
+	echo "Запускаю защитные тесты перед пушем..."
+	if ! ./.venv/bin/python -m pytest tests -q; then
+		echo "Тесты не прошли, пуш отменён. Почините или используйте --no-verify." >&2
+		exit 1
+	fi
+fi
+
+exit 0

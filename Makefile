@@ -1,12 +1,18 @@
 PY := ./.venv/bin/python
 PIP := ./.venv/bin/pip
 
-.PHONY: env test cv submit submit-safe submit-aggressive all clean
+.PHONY: env hooks test cv submit submit-safe submit-aggressive all clean
 
 env:
 	python3 -m venv .venv
 	$(PIP) install --upgrade pip
 	$(PIP) install -r requirements.txt
+	$(MAKE) hooks
+
+hooks:
+	chmod +x .githooks/pre-push
+	git config core.hooksPath .githooks
+	@echo "Хуки включены: прямой пуш в main заблокирован, тесты идут перед пушем."
 
 test:
 	$(PY) -m pytest tests -q
