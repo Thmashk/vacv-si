@@ -1,7 +1,7 @@
 PY := ./.venv/bin/python
 PIP := ./.venv/bin/pip
 
-.PHONY: env hooks test collect data validate-data cv submit final submit-safe submit-aggressive all clean
+.PHONY: env hooks test collect data validate-data cv submit final family submit-safe submit-aggressive all clean
 
 env:
 	python3 -m venv .venv
@@ -45,6 +45,18 @@ final:
 	$(PY) -m src.opt_blend --parts blend aggressive r2log_cap5k --ridge 0.1 --name opt_mix3
 	@echo "готово: submissions/opt_mix3.csv — это файл, отправленный на Kaggle"
 
+# Кандидаты на финальные сабмиты: структурная модель ряда поверх opt_mix3.
+# Версия после аудита, с исправленными метками стереоконфигурации.
+# Без подстановок из внешнего набора (--bsc none).
+# fam_bet собран до аудита и текущим кодом не воспроизводится, поэтому
+# в качестве финальных берутся эти два файла.
+family: final
+	$(PY) -m src.make_v2 --w-key 1.0 --bsc none --name fam2_bold \
+		--comment "ряд, ключевые строки по модели"
+	$(PY) -m src.make_v2 --w-key 0.0 --bsc none --name fam2_gen \
+		--comment "ряд, ключевые строки по базе"
+	@echo "готово: submissions/fam2_bold.csv и submissions/fam2_gen.csv"
+
 submit-safe:
 	$(PY) -m src.make_submission --model condmean --tail-scale 1.0 --name safe \
 		--comment "условное среднее, честный хвост"
@@ -53,7 +65,7 @@ submit-aggressive:
 	$(PY) -m src.make_submission --model condmean --tail-scale 1.8 --name aggressive \
 		--comment "усиленный хвост: занижение гиганта дороже завышения обычной молекулы"
 
-all: test cv final
+all: test cv final family
 
 clean:
 	rm -rf reports/*.npz reports/*.md submissions/*.csv
