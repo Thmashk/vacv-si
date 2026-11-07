@@ -25,14 +25,20 @@ def key_of(smi):
 
 
 def path_of(name):
-    for p in (name, "data/raw/" + name):
+    for p in (name, "data/raw/" + name, "data/processed/" + name):
         if os.path.exists(p):
             return p
     return None
 
 
 def main():
-    tr = pd.read_csv(path_of("train.csv"))
+    train_path = path_of("train_v2.csv")
+    if train_path is None:
+        raise SystemExit(
+            "не нашёл train_v2.csv ни рядом, ни в data/raw/.\n"
+            "Это текущий файл организаторов; в старом train.csv заглушка\n"
+            "равна 10000 вместо нуля, и сверка по нему недействительна.")
+    tr = pd.read_csv(train_path)
     tr["inchikey"] = [key_of(s) for s in tr["SMILES"]]
     tr["skeleton"] = [k[:14] if k else None for k in tr["inchikey"]]
 
@@ -56,7 +62,12 @@ def main():
         print("непустых CC50_uM:", int(te["CC50_uM"].notna().sum()), "из", len(te))
         print("непустых IC50_uM_VACV:", int(te["IC50_uM_VACV"].notna().sum()), "из", len(te))
 
-    ext = pd.read_csv("vacv_external_usable.csv")
+    ext_path = (path_of("vacv_external_merged.csv")
+                or path_of("vacv_external_usable.csv"))
+    if ext_path is None:
+        raise SystemExit("не нашёл vacv_external_merged.csv, "
+                         "сначала python src/data/merge_external.py")
+    ext = pd.read_csv(ext_path)
     m = tr.merge(ext, on = "skeleton", how = "inner", suffixes = ("_k", "_e"))
     print("\n=== общие молекулы:", len(m), "===")
     if not len(m):
@@ -67,10 +78,22 @@ def main():
     print("медиана отношения наш / их:", round(m["ratio"].median(), 3))
     print("в пределах 1.5 раза:", int(((m["ratio"] > 1 / 1.5) & (m["ratio"] < 1.5)).sum()), "из", len(m))
 
-    print("\nпримеры:")
-    cols = ["SI VACV", "SI", "ratio", "quality", "si_source"]
-    for _, r in m[cols].head(20).iterrows():
-        print("  их", round(r["SI VACV"], 2), "| наш", round(r["SI"], 2), "| x", round(r["ratio"], 2), "|", r["quality"])
+    # Самые сильные расхождения полезнее первых двадцати строк: именно по ним
+    # видно, где наш сбор разошёлся с организаторами.
+    print("\nсамые сильные расхождения:")
+    m["_off"] = np.log10(m["ratio"].where(m["ratio"] > 0)).abs()
+    cols = [c for c in ("SI VACV", "SI", "ratio", "quality", "origin", "doi")
+            if c in m.columns]
+    worst = m.sort_values("_off", ascending = False)[cols].head(10)
+    for _, r in worst.iterrows():
+        extra = []
+        for c in ("quality", "origin"):
+            if c in r.index:
+                extra.append(str(r[c]))
+        print("  их", round(r["SI VACV"], 2),
+              "| наш", round(r["SI"], 2),
+              "| x", round(r["ratio"], 2),
+              ("| " + ", ".join(extra)) if extra else "")
 
 
 if __name__ == "__main__":

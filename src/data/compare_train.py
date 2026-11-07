@@ -6,7 +6,10 @@ from rdkit.Chem.MolStandardize import rdMolStandardize
 
 RDLogger.DisableLog("rdApp.*")
 
-PATHS = ["train.csv", "data/raw/train.csv", "test.csv", "data/raw/test.csv"]
+# train_v2.csv, а не train.csv: в старом заглушка 10000 вместо нуля.
+PATHS = ["train_v2.csv", "data/raw/train_v2.csv", "test.csv", "data/raw/test.csv"]
+EXT = ["data/processed/vacv_external_merged.csv", "vacv_external_merged.csv",
+       "data/processed/vacv_external_usable.csv", "vacv_external_usable.csv"]
 
 chooser = rdMolStandardize.LargestFragmentChooser()
 uncharger = rdMolStandardize.Uncharger()
@@ -53,7 +56,12 @@ def load(path):
 
 
 def main():
-    ext = pd.read_csv("vacv_external_usable.csv")
+    ext_path = next((p for p in EXT if os.path.exists(p)), None)
+    if ext_path is None:
+        raise SystemExit("не нашёл vacv_external_merged.csv, "
+                         "сначала python src/data/merge_external.py")
+    print("внешний набор:", ext_path)
+    ext = pd.read_csv(ext_path)
     print("внешних строк:", len(ext), "| молекул:", ext["skeleton"].nunique())
 
     for p in PATHS:
